@@ -1,36 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/auth-helpers'
 import { validateApiKey, createApiUnauthorizedResponse } from '@/lib/api-auth'
+import { prisma } from '@/lib/prisma'
 
-const extractBookmarkSchema = z.object({
+const clawdbotBookmarkSchema = z.object({
   url: z.string().url('Invalid URL'),
-  source: z.enum(['whatsapp', 'telegram', 'manual']).default('manual'),
   userMessage: z.string().optional()
 })
 
-// POST /api/ai/extract-bookmark - AI-powered bookmark extraction
+// POST /api/clawdbot/bookmark - Create bookmark via Clawdbot with API key auth
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication - either session or API key
-    let user = null
-    let userId = null
-    
-    // First try API key authentication (for Clawdbot)
-    if (validateApiKey(request)) {
-      // For API key access, use a default user ID (you can change this to your actual user ID)
-      userId = process.env.DEFAULT_USER_ID || 'clawdbot-user'
-    } else {
-      // Fall back to session authentication (for web interface)
-      user = await getAuthenticatedUser()
-      if (!user) {
-        return createUnauthorizedResponse()
-      }
-      userId = user.id
+    // Validate API key
+    if (!validateApiKey(request)) {
+      return createApiUnauthorizedResponse()
     }
 
     const body = await request.json()
-    const { url, source, userMessage } = extractBookmarkSchema.parse(body)
+    const { url, userMessage } = clawdbotBookmarkSchema.parse(body)
+
+    // Get the default user ID for Clawdbot bookmarks
+    const defaultUserId = process.env.DEFAULT_USER_ID || 'default-user'
+    
+    // Check if user exists, create if not
+    let user = await prisma.user.findUnique({
+      where: { id: defaultUserId }
+    })
+    
+    if (!user) {
+      // Create default user for Clawdbot bookmarks
+      user = await prisma.user.create({
+        data: {
+          id: defaultUserId,
+          email: 'clawdbot@bookmark.local',
+          name: 'Clawdbot User'
+        }
+      })
+    }
 
     // Extract metadata from URL
     const metadata = await extractUrlMetadata(url)
@@ -38,53 +44,96 @@ export async function POST(request: NextRequest) {
     // Generate AI-enhanced bookmark data
     const aiEnhanced = await enhanceBookmarkWithAI(metadata, userMessage)
 
-    // Create the bookmark automatically
-    const bookmarkResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/bookmarks`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        // Forward the authorization header
-        'Cookie': request.headers.get('cookie') || ''
-      },
-      body: JSON.stringify({
+    // Create tags first
+    const tags = await Promise.all(
+      aiEnhanced.tags.map(async (tagName: string) => {
+        // Try to find existing tag
+        let tag = await prisma.tag.findUnique({
+          where: {
+            userId_name: {
+              userId: user.id,
+              name: tagName.toLowerCase()
+            }
+          }
+        })
+
+        // Create tag if it doesn't exist
+        if (!tag) {
+          const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899']
+          tag = await prisma.tag.create({
+            data: {
+              userId: user.id,
+              name: tagName.toLowerCase(),
+              color: colors[Math.floor(Math.random() * colors.length)]
+            }
+          })
+        }
+
+        return tag
+      })
+    )
+
+    // Create the bookmark
+    const bookmark = await prisma.bookmark.create({
+      data: {
+        userId: user.id,
         url: metadata.url,
         title: aiEnhanced.title,
         description: aiEnhanced.description,
         priority: aiEnhanced.priority,
-        tags: aiEnhanced.tags
-      })
+        status: 'TODO', // New bookmarks go to TODO list
+        faviconUrl: metadata.image || null,
+        tags: {
+          create: tags.map(tag => ({
+            tagId: tag.id
+          }))
+        }
+      },
+      include: {
+        tags: {
+          include: {
+            tag: true
+          }
+        }
+      }
     })
 
-    if (!bookmarkResponse.ok) {
-      throw new Error('Failed to create bookmark')
+    // Format response for WhatsApp
+    const response = {
+      success: true,
+      bookmark: {
+        id: bookmark.id,
+        title: bookmark.title,
+        description: bookmark.description,
+        url: bookmark.url,
+        priority: bookmark.priority,
+        tags: bookmark.tags.map(bt => bt.tag.name)
+      },
+      whatsappMessage: generateWhatsAppMessage(bookmark, aiEnhanced)
     }
 
-    const bookmark = await bookmarkResponse.json()
-
-    return NextResponse.json({
-      success: true,
-      bookmark,
-      aiInsights: {
-        extractedMetadata: metadata,
-        aiEnhancements: aiEnhanced,
-        source,
-        processingTime: Date.now()
-      },
-      message: `✅ Bookmark created: "${aiEnhanced.title}"\n🏷️ Tags: ${aiEnhanced.tags.join(', ')}\n📝 Added to your todo list for review`
-    })
+    return NextResponse.json(response)
 
   } catch (error) {
-    console.error('Error in AI bookmark extraction:', error)
+    console.error('Clawdbot bookmark creation error:', error)
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid URL format', details: error.errors },
+        { 
+          success: false,
+          error: 'Invalid URL format', 
+          whatsappMessage: `❌ Error: Invalid URL format\n\nPlease send a valid web link starting with https://`
+        },
         { status: 400 }
       )
     }
 
     return NextResponse.json(
-      { error: 'Failed to process bookmark', message: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        success: false,
+        error: 'Failed to create bookmark',
+        whatsappMessage: `❌ Failed to create bookmark\n\n${error instanceof Error ? error.message : 'Unknown error'}`
+      },
       { status: 500 }
     )
   }
@@ -143,7 +192,6 @@ async function extractUrlMetadata(url: string) {
 
 async function enhanceBookmarkWithAI(metadata: any, userMessage?: string) {
   try {
-    // Simple AI enhancement based on patterns and domain analysis
     const domain = metadata.domain.toLowerCase()
     const title = metadata.title.toLowerCase()
     const description = metadata.description.toLowerCase()
@@ -165,12 +213,7 @@ async function enhanceBookmarkWithAI(metadata: any, userMessage?: string) {
       title: enhancedTitle,
       description: enhancedDescription,
       priority,
-      tags,
-      aiReasoning: {
-        domainAnalysis: analyzeDomain(domain),
-        contentType: determineContentType(content, domain),
-        userContext: userMessage ? analyzeUserMessage(userMessage) : null
-      }
+      tags
     }
   } catch (error) {
     console.error('AI enhancement error:', error)
@@ -178,10 +221,9 @@ async function enhanceBookmarkWithAI(metadata: any, userMessage?: string) {
     // Fallback to basic enhancement
     return {
       title: metadata.title || metadata.domain,
-      description: metadata.description || 'Added via AI bookmark assistant',
+      description: metadata.description || 'Added via Clawdbot',
       priority: 'MEDIUM' as const,
-      tags: [metadata.domain.split('.')[0]],
-      aiReasoning: null
+      tags: [metadata.domain.split('.')[0]]
     }
   }
 }
@@ -330,51 +372,39 @@ function enhanceDescription(originalDesc: string, userMessage?: string, domain?:
     return originalDesc
   }
   
-  return `Bookmark saved from ${domain || 'web'} via AI assistant`
+  return `Bookmark saved from ${domain || 'web'} via Clawdbot WhatsApp`
 }
 
-function analyzeDomain(domain: string) {
-  const categories = {
-    social: ['twitter.com', 'reddit.com', 'linkedin.com', 'facebook.com'],
-    development: ['github.com', 'gitlab.com', 'bitbucket.org', 'stackoverflow.com'],
-    documentation: ['docs.', 'documentation', 'wiki'],
-    media: ['youtube.com', 'vimeo.com', 'twitch.tv'],
-    news: ['news.', 'techcrunch.com', 'ycombinator.com', 'theverge.com'],
-    blog: ['medium.com', 'dev.to', 'blog.', 'substack.com']
+function generateWhatsAppMessage(bookmark: any, aiEnhanced: any): string {
+  let message = `✅ **Smart bookmark created!**\n\n`
+  
+  message += `📚 **${bookmark.title}**\n`
+  
+  if (bookmark.tags && bookmark.tags.length > 0) {
+    message += `🏷️ ${bookmark.tags.map((tag: string) => `#${tag}`).join(' ')}\n`
   }
   
-  for (const [category, domains] of Object.entries(categories)) {
-    if (domains.some(d => domain.includes(d))) {
-      return category
-    }
+  if (bookmark.priority === 'HIGH') {
+    message += `🔥 High Priority\n`
+  } else if (bookmark.priority === 'LOW') {
+    message += `📅 Low Priority\n`
   }
   
-  return 'general'
-}
-
-function determineContentType(content: string, domain: string) {
-  if (content.includes('tutorial') || content.includes('guide') || content.includes('how to')) {
-    return 'tutorial'
-  }
-  if (content.includes('news') || content.includes('update') || content.includes('release')) {
-    return 'news'
-  }
-  if (content.includes('documentation') || content.includes('docs') || content.includes('reference')) {
-    return 'documentation'
-  }
-  if (domain.includes('github.com')) {
-    return 'code'
+  if (bookmark.description && bookmark.description !== bookmark.title) {
+    const desc = bookmark.description.length > 100 
+      ? bookmark.description.substring(0, 100) + '...'
+      : bookmark.description
+    message += `📝 ${desc}\n`
   }
   
-  return 'article'
-}
-
-function analyzeUserMessage(message: string) {
-  const sentiment = message.toLowerCase()
+  message += `🔗 ${bookmark.url}\n\n`
   
-  return {
-    urgency: sentiment.includes('urgent') || sentiment.includes('asap') ? 'high' : 'normal',
-    category: sentiment.includes('work') ? 'work' : sentiment.includes('personal') ? 'personal' : 'general',
-    action: sentiment.includes('read later') ? 'read-later' : sentiment.includes('review') ? 'review' : 'save'
-  }
+  message += `📱 **Quick Links:**\n`
+  message += `📚 View All: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/bookmarks\n`
+  message += `📋 Todo List: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/todo\n\n`
+  
+  message += `💡 **Tip:** Add more context for smarter AI tagging!\n`
+  message += `Example: "Bookmark: Important work docs" + [link]`
+  
+  return message
 }

@@ -18,7 +18,12 @@ export default withAuth(
           return true
         }
 
-        // For API routes (except auth), require authentication
+        // Allow Clawdbot API routes (they use API key auth instead)
+        if (pathname.startsWith('/api/clawdbot/')) {
+          return true
+        }
+
+        // For other API routes, require authentication
         if (pathname.startsWith('/api/')) {
           return !!token
         }
