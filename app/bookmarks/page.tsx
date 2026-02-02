@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { BookmarkCard } from '@/components/BookmarkCard'
 import { AddBookmarkForm } from '@/components/AddBookmarkForm'
+import { EditBookmarkForm } from '@/components/EditBookmarkForm'
+import { BulkUploadBookmarks } from '@/components/BulkUploadBookmarks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import AuthGuard from '@/components/AuthGuard'
@@ -31,6 +33,8 @@ export default function BookmarksPage() {
   const [filteredBookmarks, setFilteredBookmarks] = useState<Bookmark[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showBulkUpload, setShowBulkUpload] = useState(false)
+  const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null)
   const [selectedBookmarks, setSelectedBookmarks] = useState<Set<string>>(new Set())
   const [filters, setFilters] = useState({
     search: '',
@@ -106,6 +110,12 @@ export default function BookmarksPage() {
     } else {
       throw new Error('Failed to add bookmark')
     }
+  }
+
+  const handleEditBookmark = (bookmark: Bookmark) => {
+    setEditingBookmark(bookmark)
+    setShowAddForm(false)
+    setShowBulkUpload(false)
   }
 
   const handleUpdateBookmark = async (id: string, data: Partial<Bookmark>) => {
@@ -185,6 +195,27 @@ export default function BookmarksPage() {
     }
   }
 
+  const handleBulkImport = async (bookmarks: any[]) => {
+    const response = await fetch('/api/bookmarks/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookmarks })
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      console.log('Import result:', result)
+      await loadBookmarks()
+      setShowBulkUpload(false)
+      
+      // Show success message (you might want to add a toast notification here)
+      alert(`Import complete! ${result.summary}`)
+    } else {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to import bookmarks')
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -204,9 +235,21 @@ export default function BookmarksPage() {
             {filteredBookmarks.length} of {bookmarks.length} bookmarks
           </p>
         </div>
-        <Button onClick={() => setShowAddForm(true)}>
-          ➕ Add Bookmark
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowBulkUpload(true)}
+            disabled={showAddForm || editingBookmark}
+          >
+            📤 Bulk Import
+          </Button>
+          <Button 
+            onClick={() => setShowAddForm(true)}
+            disabled={showBulkUpload || editingBookmark}
+          >
+            ➕ Add Bookmark
+          </Button>
+        </div>
       </div>
 
       {/* Add Form */}
@@ -214,6 +257,23 @@ export default function BookmarksPage() {
         <AddBookmarkForm
           onAdd={handleAddBookmark}
           onCancel={() => setShowAddForm(false)}
+        />
+      )}
+
+      {/* Edit Form */}
+      {editingBookmark && (
+        <EditBookmarkForm
+          bookmark={editingBookmark}
+          onUpdate={handleUpdateBookmark}
+          onCancel={() => setEditingBookmark(null)}
+        />
+      )}
+
+      {/* Bulk Upload */}
+      {showBulkUpload && (
+        <BulkUploadBookmarks
+          onUpload={handleBulkImport}
+          onCancel={() => setShowBulkUpload(false)}
         />
       )}
 
@@ -366,6 +426,7 @@ export default function BookmarksPage() {
               bookmark={bookmark}
               onUpdate={handleUpdateBookmark}
               onDelete={handleDeleteBookmark}
+              onEdit={handleEditBookmark}
               isSelected={selectedBookmarks.has(bookmark.id)}
               onSelect={handleSelectBookmark}
             />

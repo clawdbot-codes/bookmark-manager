@@ -27,6 +27,7 @@ interface BookmarkCardProps {
   bookmark: Bookmark
   onUpdate: (id: string, data: Partial<Bookmark>) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  onEdit?: (bookmark: Bookmark) => void
   isSelected?: boolean
   onSelect?: (id: string, selected: boolean) => void
   showActions?: boolean
@@ -36,6 +37,7 @@ export function BookmarkCard({
   bookmark, 
   onUpdate, 
   onDelete, 
+  onEdit,
   isSelected = false,
   onSelect,
   showActions = true
@@ -228,6 +230,17 @@ export function BookmarkCard({
               disabled={isLoading}
             >
               🔥 High Priority
+            </Button>
+          )}
+
+          {onEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(bookmark)}
+              disabled={isLoading}
+            >
+              ✏️ Edit
             </Button>
           )}
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { BookmarkCard } from '@/components/BookmarkCard'
+import { EditBookmarkForm } from '@/components/EditBookmarkForm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import AuthGuard from '@/components/AuthGuard'
@@ -29,6 +30,7 @@ export default function TodoPage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [filteredBookmarks, setFilteredBookmarks] = useState<Bookmark[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null)
   const [selectedBookmarks, setSelectedBookmarks] = useState<Set<string>>(new Set())
   const [currentIndex, setCurrentIndex] = useState(0)
   const [viewMode, setViewMode] = useState<'list' | 'review'>('list')
@@ -151,6 +153,10 @@ export default function TodoPage() {
     }
   }
 
+  const handleEditBookmark = (bookmark: Bookmark) => {
+    setEditingBookmark(bookmark)
+  }
+
   const handleSelectBookmark = (id: string, selected: boolean) => {
     setSelectedBookmarks(prev => {
       const updated = new Set(prev)
@@ -212,6 +218,15 @@ export default function TodoPage() {
   return (
     <AuthGuard>
       <div className="space-y-6">
+      {/* Edit Form */}
+      {editingBookmark && (
+        <EditBookmarkForm
+          bookmark={editingBookmark}
+          onUpdate={handleUpdateBookmark}
+          onCancel={() => setEditingBookmark(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -333,6 +348,7 @@ export default function TodoPage() {
                     bookmark={bookmark}
                     onUpdate={handleUpdateBookmark}
                     onDelete={handleDeleteBookmark}
+                    onEdit={handleEditBookmark}
                     isSelected={selectedBookmarks.has(bookmark.id)}
                     onSelect={handleSelectBookmark}
                   />
@@ -396,6 +412,7 @@ export default function TodoPage() {
                   bookmark={currentBookmark}
                   onUpdate={handleUpdateBookmark}
                   onDelete={handleDeleteBookmark}
+                  onEdit={handleEditBookmark}
                   showActions={true}
                 />
               </div>
