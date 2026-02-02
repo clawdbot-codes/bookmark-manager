@@ -27,6 +27,30 @@ export function BulkUploadBookmarks({ onUpload, onCancel }: BulkUploadProps) {
   const [uploadSource, setUploadSource] = useState<'file' | 'csv'>('file')
   const [csvData, setCsvData] = useState('')
 
+  const sampleCsvData = `url,title,description,tags
+https://react.dev,React Documentation,Official React docs with hooks and components,react;documentation;frontend
+https://nextjs.org,Next.js Framework,The React framework for production applications,react;nextjs;framework
+https://tailwindcss.com,Tailwind CSS,Utility-first CSS framework for rapid UI development,css;tailwind;design
+https://typescript.dev,TypeScript Guide,TypeScript documentation and best practices,typescript;javascript;types
+https://prisma.io,Prisma ORM,Next-generation Node.js and TypeScript ORM,database;orm;typescript
+https://vercel.com,Vercel Platform,Deploy and scale your applications with ease,hosting;deployment;vercel`
+
+  const loadSampleData = () => {
+    setCsvData(sampleCsvData)
+  }
+
+  const downloadSampleCsv = () => {
+    const blob = new Blob([sampleCsvData], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'sample-bookmarks.csv'
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  }
+
   const parseBookmarkFile = async (file: File): Promise<ParsedBookmark[]> => {
     const text = await file.text()
     const bookmarks: ParsedBookmark[] = []
@@ -262,13 +286,40 @@ export function BulkUploadBookmarks({ onUpload, onCancel }: BulkUploadProps) {
               value={csvData}
               onChange={(e) => setCsvData(e.target.value)}
               placeholder="url,title,description,tags&#10;https://example.com,Example Site,A great example,web;tutorial&#10;https://react.dev,React Docs,Official React documentation,react;docs"
-              rows={6}
+              rows={8}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             />
+            <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+              <strong>CSV Format:</strong> Each line should contain: URL, Title, Description (optional), Tags (optional)
+              <br />
+              <strong>Tags:</strong> Separate multiple tags with semicolons (;)
+              <br />
+              <strong>Example:</strong> https://react.dev,React Docs,Official documentation,react;javascript;frontend
+            </div>
             <div className="flex justify-between items-center mt-2">
-              <p className="text-xs text-gray-500">
-                Format: URL, Title, Description, Tags (separated by semicolons)
-              </p>
+              <div className="flex items-center space-x-2">
+                <p className="text-xs text-gray-500">
+                  Format: URL, Title, Description, Tags (separated by semicolons)
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={loadSampleData}
+                  className="text-blue-600 hover:text-blue-800 text-xs h-6 px-2"
+                >
+                  📋 Load Sample
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={downloadSampleCsv}
+                  className="text-green-600 hover:text-green-800 text-xs h-6 px-2"
+                >
+                  💾 Download Sample
+                </Button>
+              </div>
               <Button onClick={handleCsvProcess} disabled={!csvData.trim() || isProcessing}>
                 Process CSV
               </Button>
