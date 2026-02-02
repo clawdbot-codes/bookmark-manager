@@ -77,7 +77,7 @@ export function EditBookmarkForm({ bookmark, onUpdate, onCancel }: EditBookmarkF
         description: formData.description.trim() || undefined,
         priority: formData.priority as 'HIGH' | 'MEDIUM' | 'LOW',
         status: formData.status as 'TODO' | 'REVIEWED' | 'ARCHIVED' | 'DISCARDED',
-        tags: formData.tags
+        tags: formData.tags as any  // API expects string[], interface expects Tag[]
       })
 
       onCancel() // Close the edit form

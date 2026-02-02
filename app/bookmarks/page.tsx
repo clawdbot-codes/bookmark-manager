@@ -252,7 +252,7 @@ export default function BookmarksPage() {
           <Button 
             variant="outline" 
             onClick={() => setShowAIExtractor(true)}
-            disabled={showAddForm || showBulkUpload || editingBookmark}
+            disabled={showAddForm || showBulkUpload || !!editingBookmark}
             className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 hover:from-blue-600 hover:to-purple-600"
           >
             🤖 AI Assistant
@@ -260,13 +260,13 @@ export default function BookmarksPage() {
           <Button 
             variant="outline" 
             onClick={() => setShowBulkUpload(true)}
-            disabled={showAddForm || showAIExtractor || editingBookmark}
+            disabled={showAddForm || showAIExtractor || !!editingBookmark}
           >
             📤 Bulk Import
           </Button>
           <Button 
             onClick={() => setShowAddForm(true)}
-            disabled={showBulkUpload || showAIExtractor || editingBookmark}
+            disabled={showBulkUpload || showAIExtractor || !!editingBookmark}
           >
             ➕ Add Bookmark
           </Button>

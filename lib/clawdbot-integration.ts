@@ -79,7 +79,7 @@ function generateSuccessReply(results: any[]): string {
       reply += `📚 **${bookmark.title}**\n`
       
       if (bookmark.tags?.length > 0) {
-        reply += `🏷️ ${bookmark.tags.map(tag => `#${tag}`).join(' ')}\n`
+        reply += `🏷️ ${bookmark.tags.map((tag: any) => `#${tag}`).join(' ')}\n`
       }
       
       if (bookmark.priority === 'HIGH') {

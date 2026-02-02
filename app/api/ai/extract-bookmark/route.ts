@@ -80,12 +80,17 @@ export async function POST(request: NextRequest) {
 
 async function extractUrlMetadata(url: string) {
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000)
+    
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; BookmarkBot/1.0; +https://bookmark-manager.vercel.app)'
       },
-      timeout: 10000
+      signal: controller.signal
     })
+    
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
@@ -249,7 +254,7 @@ function generateSmartTags(domain: string, content: string, userMessage?: string
   }
   
   // Remove duplicates and return
-  return [...new Set(tags)].slice(0, 6) // Limit to 6 tags
+  return Array.from(new Set(tags)).slice(0, 6) // Limit to 6 tags
 }
 
 function determinePriority(domain: string, content: string, userMessage?: string): 'HIGH' | 'MEDIUM' | 'LOW' {

@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
     }
 
     priorityStats.forEach(stat => {
-      priorityBreakdown[stat.priority] = stat._count.priority
+      priorityBreakdown[stat.priority as keyof typeof priorityBreakdown] = stat._count.priority
     })
 
     return NextResponse.json({

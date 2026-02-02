@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
           // Handle tags if provided
           if (allTags.length > 0) {
-            const uniqueTags = [...new Set(allTags.map(tag => tag.toLowerCase()))]
+            const uniqueTags = Array.from(new Set(allTags.map(tag => tag.toLowerCase())))
             
             // Create or find tags
             const tagPromises = uniqueTags.map(async (tagName) => {

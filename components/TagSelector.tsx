@@ -151,7 +151,7 @@ export function TagSelector({ selectedTags, onChange, className = '' }: TagSelec
                   backgroundColor: isSelected ? color : color + '20',
                   color: isSelected ? 'white' : color,
                   borderColor: color,
-                  ringColor: color
+                  boxShadow: `0 0 0 2px ${color}`
                 }}
               >
                 #{tag.name}
