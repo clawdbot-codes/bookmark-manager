@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { BookmarkCard } from '@/components/BookmarkCard'
 import { AddBookmarkForm } from '@/components/AddBookmarkForm'
 import { EditBookmarkForm } from '@/components/EditBookmarkForm'
@@ -30,6 +31,7 @@ interface Bookmark {
 }
 
 export default function BookmarksPage() {
+  const searchParams = useSearchParams()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [filteredBookmarks, setFilteredBookmarks] = useState<Bookmark[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -49,6 +51,14 @@ export default function BookmarksPage() {
   useEffect(() => {
     loadBookmarks()
   }, [])
+
+  // Read URL params and set initial filters
+  useEffect(() => {
+    const tagParam = searchParams.get('tag')
+    if (tagParam) {
+      setFilters(prev => ({ ...prev, tag: tagParam }))
+    }
+  }, [searchParams])
 
   // Apply filters when filters or bookmarks change
   useEffect(() => {

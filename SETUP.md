@@ -1,205 +1,336 @@
-# 🚀 Bookmark Manager - Setup Guide
+# 🚀 Setup Guide - Bookmark Manager
 
-Your bookmark manager is **production-ready** with complete authentication! Follow this guide to get it running.
+This guide will help you set up and run the Bookmark Manager project on your local machine.
 
-## ✅ What's Included
+## 📋 Prerequisites
 
-### 🔐 **Complete Authentication System**
-- **Email/Password** signup and login
-- **Google OAuth** (optional)
-- **GitHub OAuth** (optional)
-- **Session management** with NextAuth.js
-- **Route protection** and user isolation
+Before you begin, ensure you have the following installed:
 
-### 📚 **Full Bookmark Management**
-- **CRUD operations** with real-time updates
-- **Smart search** and filtering system
-- **Todo workflow** with review modes
-- **Tag management** with color coding
-- **Bulk operations** for efficient processing
-- **Statistics dashboard** with productivity tracking
+- **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
+- **npm** or **yarn** - Package manager (comes with Node.js)
+- **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop/)
+- **Git** - [Download](https://git-scm.com/)
 
-## 🛠️ Setup Instructions
+## 🔧 Installation Steps
 
-### 1. **Install Dependencies**
+### 1. Clone the Repository
+
 ```bash
+git clone <repository-url>
 cd bookmark-manager
+```
+
+### 2. Install Dependencies
+
+```bash
 npm install
 ```
 
-### 2. **Database Setup**
+### 3. Set Up Environment Variables
 
-#### Option A: **Vercel Postgres** (Recommended)
+Copy the example environment file and configure it:
+
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Login and link project
-vercel login
-vercel link
-
-# Create database
-vercel storage create postgres
-
-# Copy connection string to .env.local
+cp .env.example .env
 ```
 
-#### Option B: **Local PostgreSQL**
-```bash
-# Create database
-createdb bookmarks
+Edit `.env` and update the following variables:
 
-# Update .env.local with your connection
-DATABASE_URL="postgresql://username:password@localhost:5432/bookmarks"
-```
-
-### 3. **Environment Variables**
-Create `.env.local` file:
-
-```bash
+```env
 # Database
-DATABASE_URL="your-database-url"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bookmarks"
 
-# NextAuth.js (required)
+# NextAuth.js Configuration
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key-min-32-characters-long"
+NEXTAUTH_SECRET="your-secret-here-min-32-chars"
 
-# Optional OAuth Providers
+# OAuth Providers (optional)
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
-
 GITHUB_ID="your-github-client-id"
 GITHUB_SECRET="your-github-client-secret"
 ```
 
-### 4. **OAuth Setup (Optional)**
-
-#### Google OAuth:
-1. Go to [Google Console](https://console.cloud.google.com)
-2. Create project → APIs & Services → Credentials
-3. Create OAuth 2.0 Client ID
-4. Add `http://localhost:3000/api/auth/callback/google` to redirect URIs
-
-#### GitHub OAuth:
-1. Go to [GitHub Settings](https://github.com/settings/developers)
-2. New OAuth App
-3. Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
-
-### 5. **Database Migration**
+**Note**: Generate a secure `NEXTAUTH_SECRET` using:
 ```bash
-# Generate Prisma client
+openssl rand -base64 32
+```
+
+### 4. Set Up PostgreSQL Database with Docker
+
+#### Start PostgreSQL Container
+
+The project includes a `docker-compose.yml` file for easy database setup.
+
+**Option 1: Using Docker Compose (if available)**
+```bash
+docker compose up -d
+```
+
+**Option 2: Using Docker directly**
+```bash
+docker run -d \
+  --name bookmark-manager-db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=bookmarks \
+  -p 5432:5432 \
+  -v bookmark-manager-pgdata:/var/lib/postgresql/data \
+  postgres:16-alpine
+```
+
+#### Verify Database is Running
+
+```bash
+docker ps
+```
+
+You should see the `bookmark-manager-db` container running.
+
+### 5. Run Database Migrations
+
+Apply the database schema:
+
+```bash
+npx prisma migrate dev
+```
+
+This will:
+- Create all necessary tables
+- Generate the Prisma Client
+- Seed the database (if seed script exists)
+
+### 6. Start the Development Server
+
+```bash
+npm run dev
+```
+
+The application will be available at: **http://localhost:3000**
+
+## 🐳 Docker Commands Reference
+
+### Database Management
+
+| Command | Description |
+|---------|-------------|
+| `docker ps` | Check if database is running |
+| `docker start bookmark-manager-db` | Start the database container |
+| `docker stop bookmark-manager-db` | Stop the database container |
+| `docker restart bookmark-manager-db` | Restart the database container |
+| `docker logs bookmark-manager-db` | View database logs |
+| `docker logs -f bookmark-manager-db` | Follow database logs (real-time) |
+| `docker rm bookmark-manager-db` | Remove the container (stop first) |
+
+### Database Connection
+
+To connect to PostgreSQL directly:
+
+```bash
+docker exec -it bookmark-manager-db psql -U postgres -d bookmarks
+```
+
+Common PostgreSQL commands:
+- `\l` - List all databases
+- `\dt` - List all tables
+- `\d table_name` - Describe table structure
+- `\q` - Exit
+
+## 🔄 Prisma Commands
+
+### Database Schema Management
+
+```bash
+# Apply migrations
+npx prisma migrate dev
+
+# Deploy migrations (production)
+npx prisma migrate deploy
+
+# Reset database (⚠️ deletes all data)
+npx prisma migrate reset
+
+# Generate Prisma Client
 npx prisma generate
 
-# Push schema to database
-npx prisma db push
-
-# Optional: View database
+# Open Prisma Studio (database GUI)
 npx prisma studio
 ```
 
-### 6. **Start Development**
+## 🛠️ Development Workflow
+
+### Daily Development
+
+1. **Start the database** (if not running):
+   ```bash
+   docker start bookmark-manager-db
+   ```
+
+2. **Start the dev server**:
+   ```bash
+   npm run dev
+   ```
+
+3. **Open your browser** to http://localhost:3000
+
+### After Pulling Changes
+
+If there are new database migrations:
+
 ```bash
-npm run dev
-# Visit http://localhost:3000
+npx prisma migrate dev
 ```
 
-## 🎯 Usage Guide
+### Before Pushing Changes
 
-### **First Time Setup**
-1. **Visit homepage** → See landing page
-2. **Click "Sign Up"** → Create account with email/password or OAuth
-3. **Add bookmarks** → Start with the "Add Bookmark" button
-4. **Try todo workflow** → Use the "Todo" page to review bookmarks
+If you modified the Prisma schema:
 
-### **Core Workflows**
-
-#### **Adding Bookmarks**
-- Manual entry with URL, title, description
-- Auto-tag with priority levels
-- Automatic favicon and domain extraction
-
-#### **Review Process**
-1. **Todo Page** → See all unreviewed bookmarks
-2. **Review Mode** → Focus on one bookmark at a time
-3. **Quick Actions** → Mark reviewed, archive, or discard
-4. **Bulk Operations** → Process multiple bookmarks
-
-#### **Organization**
-- **Search** → Find by title, description, URL, tags
-- **Filter** → By status, priority, tags
-- **Tags** → Color-coded organization system
-
-## 🚀 Production Deployment
-
-### **Vercel Deployment** (Recommended)
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-
-# Set environment variables in Vercel dashboard
-# Update NEXTAUTH_URL to your domain
+npx prisma migrate dev --name describe_your_changes
 ```
 
-### **Environment Variables for Production**
+## 🧪 Testing
+
 ```bash
-NEXTAUTH_URL="https://your-domain.com"
-NEXTAUTH_SECRET="your-production-secret"
-DATABASE_URL="your-production-database-url"
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm test:watch
+
+# Run tests with coverage
+npm test:coverage
 ```
 
-## 📊 Features Overview
+## 🏗️ Building for Production
 
-### **Authentication**
-- ✅ Multi-provider login (email + OAuth)
-- ✅ Secure password hashing
-- ✅ Session management
-- ✅ Route protection
-- ✅ User isolation
+```bash
+# Create production build
+npm run build
 
-### **Bookmark Management**
-- ✅ CRUD operations with validation
-- ✅ Tag system with auto-creation
-- ✅ Priority levels (HIGH/MEDIUM/LOW)
-- ✅ Status workflow (TODO → REVIEWED → ARCHIVED/DISCARDED)
-- ✅ Smart search and filtering
-- ✅ Bulk operations
+# Start production server
+npm start
+```
 
-### **User Experience**
-- ✅ Responsive design (mobile + desktop)
-- ✅ Real-time statistics
-- ✅ Loading states and error handling
-- ✅ Professional UI with Tailwind CSS
-- ✅ Review workflow optimization
+## 🐛 Troubleshooting
 
-## 🔧 Troubleshooting
+### Database Connection Issues
 
-### **Common Issues**
+**Problem**: `Can't reach database server at localhost:5432`
 
-#### Database Connection
-- Ensure DATABASE_URL is correct
-- Check database is running
-- Run `npx prisma db push` to sync schema
+**Solutions**:
+1. Check if Docker is running:
+   ```bash
+   docker ps
+   ```
 
-#### Authentication
-- Verify NEXTAUTH_SECRET is set (32+ characters)
-- Check NEXTAUTH_URL matches your domain
-- OAuth: Verify callback URLs in provider settings
+2. Start the database container:
+   ```bash
+   docker start bookmark-manager-db
+   ```
 
-#### Development
-- Clear browser cache/cookies if auth issues
-- Check console for error messages
-- Restart dev server after environment changes
+3. Check database logs for errors:
+   ```bash
+   docker logs bookmark-manager-db
+   ```
 
-## 🎉 You're Ready!
+### Port Already in Use
 
-Your bookmark manager is now **fully functional** with:
-- 🔐 **Secure authentication**
-- 📚 **Complete bookmark management**
-- 📝 **Todo workflow system**
-- 📊 **Real-time analytics**
-- 🎨 **Professional interface**
+**Problem**: Port 3000 or 5432 is already in use
 
-**Start bookmarking!** 🚀
+**Solutions**:
+- For port 3000: Stop other Next.js apps or change the port
+  ```bash
+  npm run dev -- -p 3001
+  ```
+
+- For port 5432: Stop other PostgreSQL instances or change the port in `.env` and docker command
+
+### Prisma Client Issues
+
+**Problem**: Prisma Client is out of sync
+
+**Solution**:
+```bash
+npx prisma generate
+```
+
+### Migration Issues
+
+**Problem**: Migrations are out of sync
+
+**Solution** (⚠️ Development only - deletes data):
+```bash
+npx prisma migrate reset
+npx prisma migrate dev
+```
+
+## 📦 Project Structure
+
+```
+bookmark-manager/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes
+│   ├── components/        # React components
+│   └── ...
+├── prisma/                # Database schema and migrations
+│   ├── schema.prisma      # Database schema
+│   └── migrations/        # Migration files
+├── public/                # Static files
+├── docker-compose.yml     # Docker configuration
+├── .env                   # Environment variables (create from .env.example)
+├── next.config.js         # Next.js configuration
+└── package.json           # Dependencies and scripts
+```
+
+## 🔐 Security Notes
+
+- Never commit `.env` file to version control
+- Use strong, unique passwords for production databases
+- Rotate `NEXTAUTH_SECRET` regularly in production
+- Use environment-specific `.env` files (.env.local, .env.production)
+
+## 📚 Additional Resources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [Docker Documentation](https://docs.docker.com/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+
+## 💡 Tips
+
+1. **Use Prisma Studio** for visual database management:
+   ```bash
+   npx prisma studio
+   ```
+
+2. **Keep Docker Desktop running** for automatic container restart
+
+3. **Use VS Code extensions**:
+   - Prisma (syntax highlighting)
+   - ESLint (code quality)
+   - Prettier (code formatting)
+
+4. **Database backups** (before major migrations):
+   ```bash
+   docker exec bookmark-manager-db pg_dump -U postgres bookmarks > backup.sql
+   ```
+
+5. **Restore from backup**:
+   ```bash
+   cat backup.sql | docker exec -i bookmark-manager-db psql -U postgres -d bookmarks
+   ```
+
+## 🆘 Getting Help
+
+If you encounter issues:
+
+1. Check the [Troubleshooting](#-troubleshooting) section
+2. Review error messages carefully
+3. Check Docker and database logs
+4. Search existing issues in the repository
+5. Create a new issue with detailed error information
+
+---
+
+**Happy coding! 🎉**

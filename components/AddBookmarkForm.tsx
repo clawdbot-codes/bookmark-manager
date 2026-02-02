@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { TagSelector } from '@/components/TagSelector'
 
 interface AddBookmarkFormProps {
   onAdd: (bookmark: {
@@ -21,7 +22,7 @@ export function AddBookmarkForm({ onAdd, onCancel }: AddBookmarkFormProps) {
     title: '',
     description: '',
     priority: 'MEDIUM' as 'HIGH' | 'MEDIUM' | 'LOW',
-    tags: ''
+    tags: [] as string[]
   })
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -61,18 +62,15 @@ export function AddBookmarkForm({ onAdd, onCancel }: AddBookmarkFormProps) {
         description: formData.description.trim() || undefined,
         priority: formData.priority,
         tags: formData.tags
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag.length > 0)
       })
-      
+
       // Reset form on success
       setFormData({
         url: '',
         title: '',
         description: '',
         priority: 'MEDIUM',
-        tags: ''
+        tags: []
       })
     } catch (error) {
       console.error('Failed to add bookmark:', error)
@@ -171,18 +169,13 @@ export function AddBookmarkForm({ onAdd, onCancel }: AddBookmarkFormProps) {
 
         {/* Tags */}
         <div>
-          <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Tags
           </label>
-          <Input
-            id="tags"
-            value={formData.tags}
-            onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-            placeholder="research, programming, tutorial (comma-separated)"
+          <TagSelector
+            selectedTags={formData.tags}
+            onChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Separate multiple tags with commas
-          </p>
         </div>
 
         {/* Submit Error */}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import AuthGuard from '@/components/AuthGuard'
@@ -15,6 +16,7 @@ interface Tag {
 }
 
 export default function TagsPage() {
+  const router = useRouter()
   const [tags, setTags] = useState<Tag[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingTag, setEditingTag] = useState<string | null>(null)
@@ -136,7 +138,12 @@ export default function TagsPage() {
     setEditForm({ name: '', color: '' })
   }
 
-  const filteredTags = tags.filter(tag => 
+  const handleTagClick = (tagName: string) => {
+    if (editingTag) return // Don't navigate while editing
+    router.push(`/bookmarks?tag=${encodeURIComponent(tagName)}`)
+  }
+
+  const filteredTags = tags.filter(tag =>
     tag.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
@@ -271,7 +278,10 @@ export default function TagsPage() {
                   </div>
                 ) : (
                   /* Display Mode */
-                  <div>
+                  <div
+                    onClick={() => handleTagClick(tag.name)}
+                    className="cursor-pointer hover:bg-gray-50 transition-colors rounded-lg p-2 -m-2"
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
                         <div
@@ -284,12 +294,15 @@ export default function TagsPage() {
                         {tag._count?.bookmarks || 0} bookmark{(tag._count?.bookmarks || 0) !== 1 ? 's' : ''}
                       </div>
                     </div>
-                    
+
                     <div className="flex space-x-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => startEditing(tag)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startEditing(tag)
+                        }}
                         disabled={editingTag !== null}
                       >
                         ✏️ Edit
@@ -297,7 +310,10 @@ export default function TagsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDeleteTag(tag.id, tag.name)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteTag(tag.id, tag.name)
+                        }}
                         disabled={editingTag !== null}
                         className="text-red-600 hover:text-red-800"
                       >
@@ -309,8 +325,8 @@ export default function TagsPage() {
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <div
                         className="inline-block px-2 py-1 text-xs rounded-full border"
-                        style={{ 
-                          backgroundColor: (tag.color || '#6b7280') + '20', 
+                        style={{
+                          backgroundColor: (tag.color || '#6b7280') + '20',
                           color: tag.color || '#6b7280',
                           borderColor: tag.color || '#d1d5db'
                         }}

@@ -28,7 +28,12 @@ This application helps you manage bookmarks efficiently with a structured workfl
 
 ## 📋 Development
 
-*Setup instructions coming soon*
+See [SETUP.md](SETUP.md) for detailed setup instructions including:
+- Prerequisites and installation
+- Docker PostgreSQL setup
+- Database migrations
+- Development workflow
+- Troubleshooting guide
 
 ## 📄 License
 
