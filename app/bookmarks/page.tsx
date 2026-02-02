@@ -5,6 +5,7 @@ import { BookmarkCard } from '@/components/BookmarkCard'
 import { AddBookmarkForm } from '@/components/AddBookmarkForm'
 import { EditBookmarkForm } from '@/components/EditBookmarkForm'
 import { BulkUploadBookmarks } from '@/components/BulkUploadBookmarks'
+import { AIBookmarkExtractor } from '@/components/AIBookmarkExtractor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import AuthGuard from '@/components/AuthGuard'
@@ -34,6 +35,7 @@ export default function BookmarksPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showBulkUpload, setShowBulkUpload] = useState(false)
+  const [showAIExtractor, setShowAIExtractor] = useState(false)
   const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null)
   const [selectedBookmarks, setSelectedBookmarks] = useState<Set<string>>(new Set())
   const [filters, setFilters] = useState({
@@ -116,6 +118,7 @@ export default function BookmarksPage() {
     setEditingBookmark(bookmark)
     setShowAddForm(false)
     setShowBulkUpload(false)
+    setShowAIExtractor(false)
   }
 
   const handleUpdateBookmark = async (id: string, data: Partial<Bookmark>) => {
@@ -235,22 +238,52 @@ export default function BookmarksPage() {
             {filteredBookmarks.length} of {bookmarks.length} bookmarks
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowAIExtractor(true)}
+            disabled={showAddForm || showBulkUpload || editingBookmark}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 hover:from-blue-600 hover:to-purple-600"
+          >
+            🤖 AI Assistant
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => setShowBulkUpload(true)}
-            disabled={showAddForm || editingBookmark}
+            disabled={showAddForm || showAIExtractor || editingBookmark}
           >
             📤 Bulk Import
           </Button>
           <Button 
             onClick={() => setShowAddForm(true)}
-            disabled={showBulkUpload || editingBookmark}
+            disabled={showBulkUpload || showAIExtractor || editingBookmark}
           >
             ➕ Add Bookmark
           </Button>
         </div>
       </div>
+
+      {/* AI Bookmark Extractor */}
+      {showAIExtractor && (
+        <div className="relative">
+          <div className="absolute top-4 right-4 z-10">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAIExtractor(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </Button>
+          </div>
+          <AIBookmarkExtractor
+            onBookmarkCreated={() => {
+              loadBookmarks()
+              setShowAIExtractor(false)
+            }}
+          />
+        </div>
+      )}
 
       {/* Add Form */}
       {showAddForm && (
