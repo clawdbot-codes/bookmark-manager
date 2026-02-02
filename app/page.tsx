@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 
 interface Stats {
@@ -31,12 +32,17 @@ interface Stats {
 }
 
 export default function HomePage() {
+  const { data: session, status } = useSession()
   const [stats, setStats] = useState<Stats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    loadStats()
-  }, [])
+    if (session) {
+      loadStats()
+    } else {
+      setIsLoading(false)
+    }
+  }, [session])
 
   const loadStats = async () => {
     try {
@@ -50,6 +56,86 @@ export default function HomePage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    )
+  }
+
+  // Show landing page for unauthenticated users
+  if (!session) {
+    return (
+      <div className="space-y-12">
+        {/* Hero Section */}
+        <div className="text-center py-16">
+          <h1 className="text-4xl font-bold text-gray-900 mb-6">
+            Organize Your Digital Knowledge
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+            Transform your chaotic bookmark collection into an organized, actionable knowledge base 
+            with our streamlined review workflow. Never lose track of valuable content again.
+          </p>
+          <div className="space-x-4">
+            <Link href="/auth/signup">
+              <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                Get Started Free
+              </button>
+            </Link>
+            <Link href="/auth/signin">
+              <button className="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                Sign In
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="text-center p-6">
+            <div className="text-4xl mb-4">📚</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Smart Organization</h3>
+            <p className="text-gray-600">
+              Automatically categorize bookmarks with tags, priorities, and smart search.
+            </p>
+          </div>
+
+          <div className="text-center p-6">
+            <div className="text-4xl mb-4">📝</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Review Workflow</h3>
+            <p className="text-gray-600">
+              Process your reading queue efficiently with our dedicated todo system.
+            </p>
+          </div>
+
+          <div className="text-center p-6">
+            <div className="text-4xl mb-4">📊</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Track Progress</h3>
+            <p className="text-gray-600">
+              Monitor your reading habits and productivity with detailed analytics.
+            </p>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center bg-blue-50 py-12 rounded-lg">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Ready to get organized?
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Join thousands of users who have transformed their bookmark chaos into organized knowledge.
+          </p>
+          <Link href="/auth/signup">
+            <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+              Start Your Free Account
+            </button>
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   if (isLoading) {

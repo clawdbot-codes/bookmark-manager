@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/auth-helpers'
 
 const updateBookmarkSchema = z.object({
   title: z.string().min(1, 'Title is required').max(500, 'Title too long').optional(),
@@ -16,8 +17,17 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return createUnauthorizedResponse()
+    }
+
     const bookmark = await prisma.bookmark.findUnique({
-      where: { id: params.id },
+      where: { 
+        id: params.id,
+        userId: user.id // Ensure user owns this bookmark
+      },
       include: {
         tags: {
           include: {
@@ -53,12 +63,21 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return createUnauthorizedResponse()
+    }
+
     const body = await request.json()
     const validatedData = updateBookmarkSchema.parse(body)
 
-    // Check if bookmark exists
+    // Check if bookmark exists and belongs to user
     const existingBookmark = await prisma.bookmark.findUnique({
-      where: { id: params.id }
+      where: { 
+        id: params.id,
+        userId: user.id 
+      }
     })
 
     if (!existingBookmark) {
@@ -68,7 +87,7 @@ export async function PUT(
       )
     }
 
-    const userId = existingBookmark.userId
+    const userId = user.id
 
     // Update bookmark data
     const updateData: any = {}
@@ -169,9 +188,18 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check if bookmark exists
+    // Check authentication
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return createUnauthorizedResponse()
+    }
+
+    // Check if bookmark exists and belongs to user
     const existingBookmark = await prisma.bookmark.findUnique({
-      where: { id: params.id }
+      where: { 
+        id: params.id,
+        userId: user.id 
+      }
     })
 
     if (!existingBookmark) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { extractDomain, generateFaviconUrl } from '@/lib/utils'
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/auth-helpers'
 
 const createBookmarkSchema = z.object({
   url: z.string().url('Please enter a valid URL'),
@@ -14,6 +15,12 @@ const createBookmarkSchema = z.object({
 // GET /api/bookmarks - List bookmarks with filters
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return createUnauthorizedResponse()
+    }
+
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const priority = searchParams.get('priority')
@@ -22,9 +29,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    // For MVP, we'll use a hardcoded user ID
-    // TODO: Replace with actual user authentication
-    const userId = 'demo-user'
+    const userId = user.id
 
     const where: any = { userId }
 
@@ -98,11 +103,16 @@ export async function GET(request: NextRequest) {
 // POST /api/bookmarks - Create new bookmark
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return createUnauthorizedResponse()
+    }
+
     const body = await request.json()
     const { url, title, description, priority, tags } = createBookmarkSchema.parse(body)
 
-    // For MVP, we'll use a hardcoded user ID
-    const userId = 'demo-user'
+    const userId = user.id
 
     // Extract metadata from URL
     const domain = extractDomain(url)

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { BookmarkCard } from '@/components/BookmarkCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import AuthGuard from '@/components/AuthGuard'
 
 interface Tag {
   id: string
@@ -209,7 +210,8 @@ export default function TodoPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <AuthGuard>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -401,6 +403,7 @@ export default function TodoPage() {
           )}
         </>
       )}
-    </div>
+      </div>
+    </AuthGuard>
   )
 }

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/auth-helpers'
 
 // GET /api/stats - Get dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    // For MVP, we'll use a hardcoded user ID
-    const userId = 'demo-user'
+    // Check authentication
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return createUnauthorizedResponse()
+    }
+
+    const userId = user.id
 
     const [
       totalBookmarks,

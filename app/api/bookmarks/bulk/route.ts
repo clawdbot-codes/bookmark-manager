@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/auth-helpers'
 
 const bulkUpdateSchema = z.object({
   bookmarkIds: z.array(z.string()).min(1, 'At least one bookmark ID is required'),
@@ -11,11 +12,16 @@ const bulkUpdateSchema = z.object({
 // POST /api/bookmarks/bulk - Bulk operations on bookmarks
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return createUnauthorizedResponse()
+    }
+
     const body = await request.json()
     const { bookmarkIds, action, value } = bulkUpdateSchema.parse(body)
 
-    // For MVP, we'll use a hardcoded user ID
-    const userId = 'demo-user'
+    const userId = user.id
 
     let result: any
 
