@@ -52,6 +52,9 @@ export default function Header() {
                 <Link href="/tags" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                   Tags
                 </Link>
+                <Link href="/integrations" className="text-blue-600 hover:text-blue-800 px-3 py-2 rounded-md text-sm font-medium">
+                  🤖 WhatsApp
+                </Link>
               </nav>
 
               {/* User Menu */}
