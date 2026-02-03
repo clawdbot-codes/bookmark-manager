@@ -1,0 +1,14 @@
+{
+  "env": {
+    "NEXTAUTH_URL": "https://bookmark-manager-nkbblocks.vercel.app",
+    "NEXTAUTH_SECRET": "bookmark-manager-production-secret-key-2026-secure-32-chars-long",
+    "CLAWDBOT_API_KEY": "bookmark-clawdbot-api-key-2026-secure",
+    "DEFAULT_USER_ID": "vercel-user-default"
+  },
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}
