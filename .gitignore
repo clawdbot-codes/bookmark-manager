@@ -141,3 +141,5 @@ vite.config.ts.timestamp-*
 # Local development
 .vercel
 .env.local
+.env*.local
+.env.production
