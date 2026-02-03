@@ -94,7 +94,7 @@ export default function BookmarksPage() {
   const loadBookmarks = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/bookmarks')
+      const response = await fetch('/api/bookmarks?limit=1000')
       if (response.ok) {
         const data = await response.json()
         setBookmarks(data.bookmarks)
