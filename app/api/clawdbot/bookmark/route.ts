@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { validateApiKey, createApiUnauthorizedResponse } from '@/lib/api-auth'
+import { validateApiKey, validateAuthentication, createApiUnauthorizedResponse } from '@/lib/api-auth'
 import { prisma } from '@/lib/prisma'
 
 const clawdbotBookmarkSchema = z.object({
@@ -8,12 +8,18 @@ const clawdbotBookmarkSchema = z.object({
   userMessage: z.string().optional()
 })
 
-// POST /api/clawdbot/bookmark - Create bookmark via Clawdbot with API key auth
+// POST /api/clawdbot/bookmark - Create bookmark with multiple auth methods
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
+    // Try both API key and session authentication
+    // First use the legacy API key validation for backward compatibility
     if (!validateApiKey(request)) {
-      return createApiUnauthorizedResponse()
+      // If API key validation fails, try the new authentication method
+      const isAuthenticated = await validateAuthentication(request)
+      
+      if (!isAuthenticated) {
+        return createApiUnauthorizedResponse()
+      }
     }
 
     const body = await request.json()
