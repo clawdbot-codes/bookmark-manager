@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const { url, userMessage } = clawdbotBookmarkSchema.parse(body)
 
     // Get the default user ID for Clawdbot bookmarks
-    const defaultUserId = process.env.DEFAULT_USER_ID || 'default-user'
+    const defaultUserId = process.env.DEFAULT_USER_ID || 'clawdbot-default-user'
     
     // Check if user exists, create if not
     let user = await prisma.user.findUnique({
@@ -99,17 +99,19 @@ export async function POST(request: NextRequest) {
     })
 
     // Format response for WhatsApp
+    const formattedBookmark = {
+      id: bookmark.id,
+      title: bookmark.title,
+      description: bookmark.description,
+      url: bookmark.url,
+      priority: bookmark.priority,
+      tags: bookmark.tags.map(bt => bt.tag.name)
+    }
+    
     const response = {
       success: true,
-      bookmark: {
-        id: bookmark.id,
-        title: bookmark.title,
-        description: bookmark.description,
-        url: bookmark.url,
-        priority: bookmark.priority,
-        tags: bookmark.tags.map(bt => bt.tag.name)
-      },
-      whatsappMessage: generateWhatsAppMessage(bookmark, aiEnhanced)
+      bookmark: formattedBookmark,
+      whatsappMessage: generateWhatsAppMessage(formattedBookmark, aiEnhanced)
     }
 
     return NextResponse.json(response)
@@ -400,8 +402,8 @@ function generateWhatsAppMessage(bookmark: any, aiEnhanced: any): string {
   message += `🔗 ${bookmark.url}\n\n`
   
   message += `📱 **Quick Links:**\n`
-  message += `📚 View All: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/bookmarks\n`
-  message += `📋 Todo List: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/todo\n\n`
+  message += `📚 View All: https://bookmark-manager-beryl.vercel.app/bookmarks\n`
+  message += `📋 Todo List: https://bookmark-manager-beryl.vercel.app/todo\n\n`
   
   message += `💡 **Tip:** Add more context for smarter AI tagging!\n`
   message += `Example: "Bookmark: Important work docs" + [link]`
