@@ -156,7 +156,7 @@ async function extractUrlMetadata(url: string) {
       title: url.split('/').pop() || 'Bookmark',
       domain: new URL(url).hostname,
       description: '',
-      image: null
+      image: null as string | null
     };
     
     // For simplicity, we're using basic metadata extraction
@@ -290,7 +290,7 @@ function generateTags(domain: string, context: string): string[] {
   });
   
   // Make tags unique and clean
-  return [...new Set(tags)].map(tag => tag.trim()).filter(Boolean);
+  return Array.from(new Set(tags)).map(tag => tag.trim()).filter(Boolean);
 }
 
 // Function to generate WhatsApp message
