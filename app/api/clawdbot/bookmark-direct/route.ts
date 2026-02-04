@@ -14,7 +14,8 @@ const WHATSAPP_API_KEY = 'bookmark-clawdbot-api-key-2026-secure1757';
 const bookmarkSchema = z.object({
   url: z.string().url(),
   userMessage: z.string().optional(),
-  userEmail: z.string().email().optional()
+  userEmail: z.string().email().optional(),
+  userId: z.string().optional()
 });
 
 // Function to extract metadata from a URL
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { url, userMessage, userEmail } = bookmarkSchema.parse(body);
+    const { url, userMessage, userEmail, userId } = bookmarkSchema.parse(body);
 
     // Extract metadata
     const metadata = await extractMetadata(url);
@@ -128,8 +129,18 @@ export async function POST(request: NextRequest) {
     // Find user
     let user = null;
     
-    // First try to find by email if provided
-    if (userEmail) {
+    // First try to find by specific userId if provided
+    if (userId) {
+      user = await prisma.user.findUnique({
+        where: {
+          id: userId
+        }
+      });
+      console.log(`Found user by ID ${userId}:`, user ? 'Yes' : 'No');
+    }
+    
+    // Then try to find by email if provided
+    if (!user && userEmail) {
       user = await prisma.user.findFirst({
         where: {
           email: userEmail
@@ -138,7 +149,7 @@ export async function POST(request: NextRequest) {
       console.log(`Found user by email ${userEmail}:`, user ? 'Yes' : 'No');
     }
     
-    // If no user found by email, try the default user ID
+    // If no user found by email or userId, try the default user ID
     if (!user) {
       const defaultUserId = process.env.DEFAULT_USER_ID || 'clawdbot-default-user';
       user = await prisma.user.findFirst({
@@ -146,7 +157,7 @@ export async function POST(request: NextRequest) {
           id: defaultUserId
         }
       });
-      console.log(`Found user by ID ${defaultUserId}:`, user ? 'Yes' : 'No');
+      console.log(`Found user by default ID ${defaultUserId}:`, user ? 'Yes' : 'No');
     }
     
     // If still no user, try to find any user
