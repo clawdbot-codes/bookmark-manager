@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { validateApiKey, createApiUnauthorizedResponse } from '@/lib/api-auth';
+import { z } from 'zod';
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
 
 // API key for authorization
 const CLAWDBOT_API_KEY = process.env.CLAWDBOT_API_KEY || 'bookmark-api-key-change-this-in-production';
+const WHATSAPP_API_KEY = 'bookmark-clawdbot-api-key-2026-secure1757';
+
+// Request schema validation
+const bookmarkSchema = z.object({
+  url: z.string().url(),
+  userMessage: z.string().optional(),
+  userEmail: z.string().email().optional()
+});
 
 // Function to extract metadata from a URL
 async function extractMetadata(url: string) {
@@ -74,24 +83,22 @@ function generateTags(url: string, context?: string): string[] {
   }
   
   // Make tags unique and clean
-  return Array.from(new Set(tags)).map(tag => tag.trim()).filter(Boolean);
+  return [...new Set(tags)].map(tag => tag.trim()).filter(Boolean);
 }
 
 // Main API handler
 export async function POST(request: NextRequest) {
-  // Validate API key
-  if (!validateApiKey(request)) {
+  // Check authorization header
+  const authHeader = request.headers.get('authorization');
+  
+  if (!authHeader || (authHeader !== CLAWDBOT_API_KEY && authHeader !== WHATSAPP_API_KEY)) {
     return createApiUnauthorizedResponse();
   }
 
   try {
     // Parse request body
     const body = await request.json();
-    const { url, userMessage } = body;
-
-    if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
-    }
+    const { url, userMessage, userEmail } = bookmarkSchema.parse(body);
 
     // Extract metadata
     const metadata = await extractMetadata(url);
@@ -118,40 +125,59 @@ export async function POST(request: NextRequest) {
       tags
     };
 
-    // Find or create default user
-    const defaultUserId = process.env.DEFAULT_USER_ID || 'clawdbot-default-user';
+    // Find user
+    let user = null;
     
-    // Check if user exists by ID
-    let user = await prisma.user.findFirst({
-      where: {
-        id: defaultUserId
-      }
-    });
+    // First try to find by email if provided
+    if (userEmail) {
+      user = await prisma.user.findFirst({
+        where: {
+          email: userEmail
+        }
+      });
+      console.log(`Found user by email ${userEmail}:`, user ? 'Yes' : 'No');
+    }
     
-    // If not found by ID, create a new user
+    // If no user found by email, try the default user ID
+    if (!user) {
+      const defaultUserId = process.env.DEFAULT_USER_ID || 'clawdbot-default-user';
+      user = await prisma.user.findFirst({
+        where: {
+          id: defaultUserId
+        }
+      });
+      console.log(`Found user by ID ${defaultUserId}:`, user ? 'Yes' : 'No');
+    }
+    
+    // If still no user, try to find any user
+    if (!user) {
+      user = await prisma.user.findFirst();
+      console.log('Found first available user:', user ? 'Yes' : 'No');
+    }
+    
+    // If still no user, try to create a default user
     if (!user) {
       try {
+        const defaultUserId = process.env.DEFAULT_USER_ID || 'clawdbot-default-user';
         user = await prisma.user.create({
           data: {
             id: defaultUserId,
             name: 'Clawdbot Default User',
-            email: `whatsapp-bookmarks-${defaultUserId}@example.com`,
+            email: userEmail || `whatsapp-bookmarks-${defaultUserId}@example.com`,
             createdAt: new Date(),
             updatedAt: new Date()
           }
         });
+        console.log('Created new user:', user.id);
       } catch (userCreateError) {
-        // If user creation fails (likely due to email conflict), find a user
-        user = await prisma.user.findFirst();
+        console.error('Error creating user:', userCreateError);
         
-        // If still no user, return error
-        if (!user) {
-          return NextResponse.json({
-            success: false,
-            error: 'Failed to find or create user',
-            whatsappMessage: `❌ Failed to find or create user\n\n${userCreateError}`
-          }, { status: 500 });
-        }
+        // If we still don't have a user, return an error
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to find or create user',
+          whatsappMessage: `❌ Failed to find or create user\n\n${userCreateError}`
+        }, { status: 500 });
       }
     }
     
@@ -185,7 +211,7 @@ export async function POST(request: NextRequest) {
     // Create the bookmark
     const bookmark = await prisma.bookmark.create({
       data: {
-        userId: user.id,
+        userId: user!.id,
         url: metadata.url,
         title: aiEnhanced.title,
         description: aiEnhanced.description,
@@ -206,6 +232,8 @@ export async function POST(request: NextRequest) {
         }
       }
     });
+    
+    console.log('Created bookmark:', bookmark.id);
     
     // Format response for WhatsApp
     const formattedBookmark = {
