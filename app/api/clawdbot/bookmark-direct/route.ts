@@ -15,7 +15,8 @@ const bookmarkSchema = z.object({
   url: z.string().url(),
   userMessage: z.string().optional(),
   userEmail: z.string().email().optional(),
-  userId: z.string().optional()
+  userId: z.string().optional(),
+  source: z.enum(['whatsapp', 'telegram', 'web']).optional()
 });
 
 // Function to extract metadata from a URL
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { url, userMessage, userEmail, userId } = bookmarkSchema.parse(body);
+    const { url, userMessage, userEmail, userId, source } = bookmarkSchema.parse(body);
 
     // Extract metadata
     const metadata = await extractMetadata(url);
@@ -124,7 +125,8 @@ export async function POST(request: NextRequest) {
       title: metadata.title || url.split('/').pop() || 'Bookmark',
       description: userMessage || metadata.description || `Bookmark from ${metadata.domain}`,
       priority,
-      tags
+      tags,
+      source: source || 'web' // Track where the bookmark came from
     };
 
     // Find user
@@ -257,23 +259,33 @@ export async function POST(request: NextRequest) {
       tags: bookmark.tags.map(bt => bt.tag.name)
     };
     
-    // Generate WhatsApp message
-    const whatsappMessage = generateWhatsAppMessage(formattedBookmark, aiEnhanced);
+    // Generate message for messaging platforms
+    let responseMessage;
+    if (source === 'telegram') {
+      responseMessage = generateTelegramMessage(formattedBookmark, aiEnhanced);
+    } else {
+      responseMessage = generateWhatsAppMessage(formattedBookmark, aiEnhanced);
+    }
     
     // Return success response
     return NextResponse.json({
       success: true,
       bookmark: formattedBookmark,
-      whatsappMessage
+      whatsappMessage: responseMessage, // Keep the same field name for backward compatibility
+      telegramMessage: responseMessage  // Add a dedicated field for Telegram
     });
     
   } catch (error: any) {
     console.error('Error creating bookmark:', error);
     
+    // Generate error message appropriate for the source
+    const errorMessage = `❌ Failed to create bookmark\n\n${error.message}`;
+    
     return NextResponse.json({
       success: false,
       error: 'Failed to create bookmark',
-      whatsappMessage: `❌ Failed to create bookmark\n\n${error.message}`
+      whatsappMessage: errorMessage,
+      telegramMessage: errorMessage.replace(/\*\*/g, '') // Remove markdown for Telegram
     }, { status: 500 });
   }
 }
@@ -308,6 +320,40 @@ function generateWhatsAppMessage(bookmark: any, aiEnhanced: any): string {
   message += `📋 Todo List: https://bookmark-manager-beryl.vercel.app/todo\n\n`;
   
   message += `💡 **Tip:** Add more context for smarter AI tagging!\nExample: "Bookmark: Important work docs" + [link]`;
+  
+  return message;
+}
+
+// Generate Telegram message (simplified format for Telegram)
+function generateTelegramMessage(bookmark: any, aiEnhanced: any): string {
+  let message = `✅ Smart bookmark created!\n\n`;
+  
+  message += `📚 ${bookmark.title}\n`;
+  
+  if (bookmark.tags && bookmark.tags.length > 0) {
+    message += `🏷️ ${bookmark.tags.map((tag: string) => `#${tag}`).join(' ')}\n`;
+  }
+  
+  if (bookmark.priority === 'HIGH') {
+    message += `🔥 High Priority\n`;
+  } else if (bookmark.priority === 'LOW') {
+    message += `📅 Low Priority\n`;
+  }
+  
+  if (bookmark.description && bookmark.description !== bookmark.title) {
+    const desc = bookmark.description.length > 100 
+      ? bookmark.description.substring(0, 100) + '...'
+      : bookmark.description;
+    message += `📝 ${desc}\n`;
+  }
+  
+  message += `🔗 ${bookmark.url}\n\n`;
+  
+  message += `📱 Quick Links:\n`;
+  message += `📚 View All: https://bookmark-manager-beryl.vercel.app/bookmarks\n`;
+  message += `📋 Todo List: https://bookmark-manager-beryl.vercel.app/todo\n\n`;
+  
+  message += `💡 Tip: Add more context for smarter AI tagging!\nExample: "/bookmark [URL] [description]"`;
   
   return message;
 }
