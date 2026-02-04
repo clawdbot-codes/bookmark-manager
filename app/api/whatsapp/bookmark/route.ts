@@ -290,7 +290,7 @@ function generateTags(domain: string, context: string): string[] {
   });
   
   // Make tags unique and clean
-  return [...new Set(tags)].map(tag => tag.trim()).filter(Boolean);
+  return Array.from(new Set(tags)).map(tag => tag.trim()).filter(Boolean);
 }
 
 // Function to generate WhatsApp message
