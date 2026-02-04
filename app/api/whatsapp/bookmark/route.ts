@@ -156,7 +156,7 @@ async function extractUrlMetadata(url: string) {
       title: url.split('/').pop() || 'Bookmark',
       domain: new URL(url).hostname,
       description: '',
-      image: null
+      image: null as string | null
     };
     
     // For simplicity, we're using basic metadata extraction
