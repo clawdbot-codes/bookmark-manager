@@ -289,8 +289,11 @@ function generateTags(domain: string, context: string): string[] {
     }
   });
   
-  // Make tags unique and clean
-  return Array.from(new Set(tags)).map(tag => tag.trim()).filter(Boolean);
+  // Make tags unique and clean using a more compatible approach
+  // First create a unique array using a Map
+  const uniqueTags = [...new Map(tags.map(tag => [tag, tag])).values()];
+  // Then trim and filter out empty tags
+  return uniqueTags.map(tag => tag.trim()).filter(Boolean);
 }
 
 // Function to generate WhatsApp message

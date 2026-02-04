@@ -84,7 +84,8 @@ function generateTags(url: string, context?: string): string[] {
   }
   
   // Make tags unique and clean
-  return [...new Set(tags)].map(tag => tag.trim()).filter(Boolean);
+  // Using Array.from instead of spread for better TS compatibility
+  return Array.from(new Set(tags)).map(tag => tag.trim()).filter(Boolean);
 }
 
 // Main API handler
