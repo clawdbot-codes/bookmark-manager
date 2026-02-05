@@ -1,4 +1,4 @@
-// API Authentication for Clawdbot and WhatsApp integration
+// API Authentication for Clawdbot, WhatsApp, and Telegram integration
 
 import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth';
@@ -9,6 +9,9 @@ const CLAWDBOT_API_KEY = process.env.CLAWDBOT_API_KEY || 'bookmark-api-key-chang
 
 // Hardcoded WhatsApp API key for direct integration
 const WHATSAPP_API_KEY = 'bookmark-clawdbot-api-key-2026-secure1757'
+
+// Telegram bot token from environment
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''
 
 /**
  * Validate API key with support for multiple authentication methods:
@@ -21,12 +24,12 @@ export async function validateAuthentication(request: NextRequest): Promise<bool
   
   if (authHeader) {
     // Support both "Bearer TOKEN" and "TOKEN" formats
-    const token = authHeader.startsWith('Bearer ') 
+    const token = authHeader.startsWith('Bearer ')
       ? authHeader.slice(7)
       : authHeader
-    
-    // Check against both API keys
-    if (token === CLAWDBOT_API_KEY || token === WHATSAPP_API_KEY) {
+
+    // Check against all API keys (Clawdbot, WhatsApp, Telegram)
+    if (token === CLAWDBOT_API_KEY || token === WHATSAPP_API_KEY || (TELEGRAM_BOT_TOKEN && token === TELEGRAM_BOT_TOKEN)) {
       return true
     }
   }
@@ -53,12 +56,12 @@ export function validateApiKey(request: NextRequest): boolean {
   }
   
   // Support both "Bearer TOKEN" and "TOKEN" formats
-  const token = authHeader.startsWith('Bearer ') 
+  const token = authHeader.startsWith('Bearer ')
     ? authHeader.slice(7)
     : authHeader
-  
-  // Check against both API keys
-  return token === CLAWDBOT_API_KEY || token === WHATSAPP_API_KEY
+
+  // Check against all API keys (Clawdbot, WhatsApp, Telegram)
+  return token === CLAWDBOT_API_KEY || token === WHATSAPP_API_KEY || (TELEGRAM_BOT_TOKEN && token === TELEGRAM_BOT_TOKEN)
 }
 
 export function createApiUnauthorizedResponse() {
@@ -80,4 +83,8 @@ export function getApiKey(): string {
 
 export function getWhatsAppApiKey(): string {
   return WHATSAPP_API_KEY
+}
+
+export function getTelegramBotToken(): string {
+  return TELEGRAM_BOT_TOKEN
 }
