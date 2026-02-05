@@ -23,6 +23,18 @@ export default withAuth(
           return true
         }
 
+        // Allow Telegram API routes (they use API key auth and webhook secret)
+        if (pathname.startsWith('/api/telegram/') ||
+            pathname.startsWith('/api/webhooks/telegram')) {
+          return true
+        }
+
+        // Allow WhatsApp API routes (they use API key auth and webhook secret)
+        if (pathname.startsWith('/api/whatsapp/') ||
+            pathname.startsWith('/api/webhooks/whatsapp')) {
+          return true
+        }
+
         // For other API routes, require authentication
         if (pathname.startsWith('/api/')) {
           return !!token
