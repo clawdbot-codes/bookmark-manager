@@ -29,7 +29,7 @@ export async function validateAuthentication(request: NextRequest): Promise<bool
       : authHeader
 
     // Check against all API keys (Clawdbot, WhatsApp, Telegram)
-    if (token === CLAWDBOT_API_KEY || token === WHATSAPP_API_KEY || (TELEGRAM_BOT_TOKEN && token === TELEGRAM_BOT_TOKEN)) {
+    if (token === CLAWDBOT_API_KEY || token === WHATSAPP_API_KEY || (!!TELEGRAM_BOT_TOKEN && token === TELEGRAM_BOT_TOKEN)) {
       return true
     }
   }
@@ -61,7 +61,7 @@ export function validateApiKey(request: NextRequest): boolean {
     : authHeader
 
   // Check against all API keys (Clawdbot, WhatsApp, Telegram)
-  return token === CLAWDBOT_API_KEY || token === WHATSAPP_API_KEY || (TELEGRAM_BOT_TOKEN && token === TELEGRAM_BOT_TOKEN)
+  return token === CLAWDBOT_API_KEY || token === WHATSAPP_API_KEY || (!!TELEGRAM_BOT_TOKEN && token === TELEGRAM_BOT_TOKEN)
 }
 
 export function createApiUnauthorizedResponse() {
